@@ -27,7 +27,12 @@ SOURCES += main.cpp\
         mainwindow.cpp \
     csapp.c \
     core.cpp \
-    bit.cpp
+    bit.cpp \
+    debug.cpp \
+    ysyscall.cpp \
+    vm.cpp \
+    kernel.cpp \
+    y86ui.cpp
 
 HEADERS  += mainwindow.h \
     csapp.h \
@@ -36,6 +41,9 @@ HEADERS  += mainwindow.h \
     bit.h \
     mem.h \
     vm.h \
-    cache.h
+    cache.h \
+    elf.h \
+    ysyscall.h \
+    kernel.h
 
 FORMS    += mainwindow.ui

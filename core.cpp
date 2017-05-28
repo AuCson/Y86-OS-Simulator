@@ -2,10 +2,9 @@
 #include <assert.h>
 #include <cstring>
 #include <iostream>
-#include <QMessageBox>
 #include "csapp.h"
-
-
+#include "cpu.h"
+#include "vm.h"
 void Core::init()
 {
     icode = ifun = 0;
@@ -57,8 +56,7 @@ void Core::init()
     stat = SAOK;
 
     logs.clear();
-    regname[0] = "%eax",regname[1]="%ecx",regname[2]="%edx",regname[3]="%ebx",
-            regname[4]="%esp",regname[5]="%ebp",regname[6]="%esi",regname[7]="%edi",regname[8] = "#error";
+
     for(int i=0;i<5;++i)
         inspos[i]=0;
 }
@@ -135,7 +133,8 @@ void Core::writemem(int addr,int val,int& error)
     logs.push_front((std::string)buf);
     for(int i=0;i<4;++i)
     {
-        mem[addr] = val & 0xFF;
+        vm->write(addr,error,mem_src,val & 0xFF);
+        //mem[addr] = val & 0xFF;
         val >>= 8;
         ++addr;
     }
@@ -152,15 +151,14 @@ int Core::readmem(int addr,int &error)
     }
     int res = 0;
     logs.push_front((std::string)buf);
+    int src;
     for(int i=0;i<4;++i)
     {
-
-        if(mem.find(addr)==mem.end())
-        {
-            error = 1;
+        int t_res = vm->read(addr,error,src);
+        if(error)
             return 0;
-        }
-        res = res + (mem[addr]<<(8*i));
+        mem_src = src;
+        res = res + (t_res<<(8*i));
         ++addr;
     }
     sprintf(buf,"M:Read Memory at %x : %x",addr-4,res);
@@ -588,7 +586,7 @@ updateF:
     if(f_pc<0 || f_pc >= (1<<16)-6)
         imem_error = 1;
 
-    f_icode  = mem[f_pc];
+    f_icode  = readmem(f_pc,terror);
     f_ifun = f_icode & 0xF;
     f_icode >>= 4;
 
@@ -622,7 +620,7 @@ updateF:
     bool need_regids = isIn(f_icode,b,8);
     if (need_regids)
     {
-        f_rA = mem[f_valP];
+        f_rA = readmem(f_valP,error);
         f_rB = f_rA & 0xf;
         f_rA >>= 4;
         f_valP ++;
@@ -634,7 +632,7 @@ updateF:
         f_valC = 0;
         for(int i=0;i<4;++i)
         {
-            f_valC += mem[f_valP++]<<(i*8);
+            f_valC += readmem(f_valP++,error)<<(i*8);
         }
     }
 
@@ -646,5 +644,15 @@ updateF:
 
     if(f_icode == ICALL)
         funcid = f_predPC;
+}
+
+void Core::single_run(){
+    logs.clear();
+    PipeLogic();
+    stageW();
+    stageM();
+    stageE();
+    stageD();
+    stageF();
 }
 

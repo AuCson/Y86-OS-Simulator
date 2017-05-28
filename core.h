@@ -5,9 +5,8 @@
 #include <list>
 #include <stack>
 #include <vector>
-
 class CPU;
-
+class VM;
 class Core
 {
 public:
@@ -15,7 +14,16 @@ public:
     {
         cpu = _cpu;
     }
+
+    void set_vm(VM* _vm){
+        vm = _vm;
+    }
+
     CPU *cpu;
+    VM* vm;
+    int mem_src;
+    int context_switching = 0;
+
     //Stat
     const int IHALT = 0,INOP = 1,IRRMOVL = 2, IIRMOVL = 3,IRMMOVL = 4,IMRMOVL = 5,IOPL = 6,
             IJXX = 7,ICALL = 8,IRET = 9,IPUSHL = 0xA, IPOPL = 0xB, ICMPL = 0xC, ILEAVE = 0xD;
