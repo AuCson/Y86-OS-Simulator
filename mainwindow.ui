@@ -46,7 +46,7 @@
        </rect>
       </property>
      </widget>
-     <widget class="QTextEdit" name="textEdit">
+     <widget class="QTextEdit" name="console">
       <property name="geometry">
        <rect>
         <x>-5</x>
@@ -85,7 +85,7 @@
      <attribute name="title">
       <string>Hardware</string>
      </attribute>
-     <widget class="QTreeWidget" name="treeWidget">
+     <widget class="QTreeWidget" name="hardwares">
       <property name="geometry">
        <rect>
         <x>-2</x>
@@ -99,16 +99,6 @@
         <string>YOS</string>
        </property>
       </column>
-      <item>
-       <property name="text">
-        <string>CPU-SET</string>
-       </property>
-       <item>
-        <property name="text">
-         <string>CPU0</string>
-        </property>
-       </item>
-      </item>
       <item>
        <property name="text">
         <string>DRAM</string>
@@ -147,7 +137,7 @@
      </widget>
     </widget>
    </widget>
-   <widget class="QStackedWidget" name="stackedWidget">
+   <widget class="QStackedWidget" name="stacked">
     <property name="geometry">
      <rect>
       <x>260</x>
@@ -244,7 +234,7 @@
       </property>
       <widget class="QWidget" name="tabWidget_2Page1">
        <attribute name="title">
-        <string/>
+        <string>Running Process</string>
        </attribute>
        <widget class="QTableWidget" name="tableWidget">
         <property name="geometry">
@@ -280,7 +270,7 @@
         <property name="geometry">
          <rect>
           <x>20</x>
-          <y>40</y>
+          <y>30</y>
           <width>67</width>
           <height>17</height>
          </rect>
@@ -294,11 +284,11 @@
          <string>PID:</string>
         </property>
        </widget>
-       <widget class="QLabel" name="label_3">
+       <widget class="QLabel" name="l_pid">
         <property name="geometry">
          <rect>
           <x>80</x>
-          <y>40</y>
+          <y>30</y>
           <width>67</width>
           <height>17</height>
          </rect>
@@ -311,7 +301,7 @@
         <property name="geometry">
          <rect>
           <x>20</x>
-          <y>60</y>
+          <y>50</y>
           <width>67</width>
           <height>17</height>
          </rect>
@@ -320,11 +310,11 @@
          <string>Status:</string>
         </property>
        </widget>
-       <widget class="QLabel" name="label_5">
+       <widget class="QLabel" name="l_status">
         <property name="geometry">
          <rect>
           <x>80</x>
-          <y>60</y>
+          <y>50</y>
           <width>67</width>
           <height>17</height>
          </rect>
@@ -356,11 +346,135 @@
          <string>VM_AREA_STRUCT</string>
         </property>
        </widget>
+       <widget class="QLabel" name="label_13">
+        <property name="geometry">
+         <rect>
+          <x>20</x>
+          <y>70</y>
+          <width>67</width>
+          <height>17</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>Period:</string>
+        </property>
+       </widget>
+       <widget class="QLabel" name="l_period">
+        <property name="geometry">
+         <rect>
+          <x>80</x>
+          <y>70</y>
+          <width>67</width>
+          <height>17</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>TextLabel</string>
+        </property>
+       </widget>
+       <widget class="QLabel" name="label_3">
+        <property name="geometry">
+         <rect>
+          <x>170</x>
+          <y>30</y>
+          <width>67</width>
+          <height>17</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>CPU:</string>
+        </property>
+       </widget>
+       <widget class="QLabel" name="l_cpu">
+        <property name="geometry">
+         <rect>
+          <x>220</x>
+          <y>30</y>
+          <width>67</width>
+          <height>17</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>TextLabel</string>
+        </property>
+       </widget>
+       <widget class="QLabel" name="label_11">
+        <property name="geometry">
+         <rect>
+          <x>170</x>
+          <y>50</y>
+          <width>67</width>
+          <height>17</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>Core:</string>
+        </property>
+       </widget>
+       <widget class="QLabel" name="l_core">
+        <property name="geometry">
+         <rect>
+          <x>220</x>
+          <y>50</y>
+          <width>67</width>
+          <height>17</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>TextLabel</string>
+        </property>
+       </widget>
       </widget>
       <widget class="QWidget" name="tabWidget_2Page3">
        <attribute name="title">
-        <string/>
+        <string>Pipeline</string>
        </attribute>
+       <widget class="QLabel" name="label_9">
+        <property name="geometry">
+         <rect>
+          <x>10</x>
+          <y>10</y>
+          <width>101</width>
+          <height>17</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>Register log:</string>
+        </property>
+       </widget>
+       <widget class="QLabel" name="label_10">
+        <property name="geometry">
+         <rect>
+          <x>10</x>
+          <y>180</y>
+          <width>67</width>
+          <height>17</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>Event log:</string>
+        </property>
+       </widget>
+       <widget class="QTextBrowser" name="textBrowser">
+        <property name="geometry">
+         <rect>
+          <x>10</x>
+          <y>210</y>
+          <width>331</width>
+          <height>141</height>
+         </rect>
+        </property>
+       </widget>
+       <widget class="QTextBrowser" name="textBrowser_2">
+        <property name="geometry">
+         <rect>
+          <x>10</x>
+          <y>40</y>
+          <width>331</width>
+          <height>131</height>
+         </rect>
+        </property>
+       </widget>
       </widget>
      </widget>
      <widget class="QTableWidget" name="tdisas">
@@ -482,19 +596,6 @@
     </property>
     <property name="text">
      <string>Run</string>
-    </property>
-   </widget>
-   <widget class="QLabel" name="label_9">
-    <property name="geometry">
-     <rect>
-      <x>550</x>
-      <y>10</y>
-      <width>67</width>
-      <height>17</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>CLK</string>
     </property>
    </widget>
   </widget>

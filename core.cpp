@@ -45,6 +45,9 @@ void Core::init()
     for(int i=0;i<8;++i)
         REG[i]=0;
     REG[RESP] = 0x1000;
+
+    for(int i =0;i<6;++i)
+        hist_stat[i] = -1;
     //Flags
     OF = SF = 0;
     ZF = 1;
@@ -122,7 +125,7 @@ int Core::alucalc(int aluA,int aluB,int alufun,bool setcc)
     return res;
 }
 
-void Core::writemem(int addr,int val,int& error)
+void Core::writemem(int addr,int val,int& error) //WORD write
 {
     if(addr < 0 || addr >= (1<<16))
     {
@@ -150,7 +153,6 @@ int Core::readmem(int addr,int &error)
         return 0;
     }
     int res = 0;
-    logs.push_front((std::string)buf);
     int src;
     for(int i=0;i<4;++i)
     {
@@ -163,6 +165,16 @@ int Core::readmem(int addr,int &error)
     }
     sprintf(buf,"M:Read Memory at %x : %x",addr-4,res);
     logs.push_front((std::string)buf);
+    return res;
+}
+
+unsigned char Core::readmem_byte(int addr,int &error){
+    int res = 0;
+    int src;
+    res = vm->read(addr,error,src);
+    if(error)
+        return 0;
+    mem_src = src;
     return res;
 }
 
@@ -209,8 +221,8 @@ void Core::PipeLogic()
         logs.push_front((std::string)buf);
     }
 
-    int k[] = { SADR, SINS, SHLT };
-    int l[] = { SADR, SINS, SHLT };
+    int k[] = { SADR, SINS, SHLT, SSYS };
+    int l[] = { SADR, SINS, SHLT, SSYS };
     M_bubble = isIn(m_stat, k,3) || isIn(W_stat, l,3);
     if(M_bubble)
     {
@@ -218,7 +230,7 @@ void Core::PipeLogic()
         logs.push_front((std::string)buf);
     }
 
-    int m[] = { SADR, SINS, SHLT };
+    int m[] = { SADR, SINS, SHLT, SSYS };
     W_stall = isIn(W_stat,m,3);
     if(W_stall)
     {
@@ -382,8 +394,8 @@ void Core::stageE()
     else
         alufun = ALUADD;
 
-    int g[] = { SADR, SINS, SHLT };
-    int h[] =  { SADR, SINS, SHLT };
+    int g[] = { SADR, SINS, SHLT, SSYS };
+    int h[] =  { SADR, SINS, SHLT, SSYS };
     bool set_cc = (E_icode == IOPL || E_icode == ICMPL) && (!isIn(m_stat, g,3)) && (!isIn(W_stat, h,3));
 
     e_valE = alucalc(aluA, aluB, alufun, set_cc);
@@ -586,9 +598,10 @@ updateF:
     if(f_pc<0 || f_pc >= (1<<16)-6)
         imem_error = 1;
 
-    f_icode  = readmem(f_pc,terror);
+    f_icode  = readmem_byte(f_pc,core_error);
     f_ifun = f_icode & 0xF;
     f_icode >>= 4;
+    f_icode &= 0xF;
 
     f_valP = f_pc + 1;
 
@@ -602,8 +615,8 @@ updateF:
     else
         f_ifun = f_ifun;
 
-    int a[] = { INOP, IHALT, IRRMOVL, IIRMOVL, IRMMOVL, IMRMOVL,IOPL,ICMPL, IJXX, ICALL, IRET, IPUSHL, IPOPL,ILEAVE };
-    instr_valid = isIn(f_icode,a,14);
+    int a[] = { INOP, IHALT, IRRMOVL, IIRMOVL, IRMMOVL, IMRMOVL,IOPL,ICMPL, IJXX, ICALL, IRET, IPUSHL, IPOPL,ILEAVE,ISYSCALL };
+    instr_valid = isIn(f_icode,a,15);
 
 
     if (imem_error)
@@ -612,6 +625,9 @@ updateF:
         f_stat = SINS;
     else if (f_icode == IHALT)
         f_stat = SHLT;
+    //update syscall
+    else if (f_icode == ISYSCALL)
+        f_stat = SSYS;
     else
         f_stat = SAOK;
 
@@ -620,19 +636,22 @@ updateF:
     bool need_regids = isIn(f_icode,b,8);
     if (need_regids)
     {
-        f_rA = readmem(f_valP,error);
+        f_rA = readmem_byte(f_valP,core_error);
         f_rB = f_rA & 0xf;
         f_rA >>= 4;
         f_valP ++;
     }
 
-    int c[] = { IIRMOVL, IRMMOVL, IMRMOVL, IJXX, ICALL };
-    bool need_valC = isIn(f_icode, c,5);
+    int c[] = { IIRMOVL, IRMMOVL, IMRMOVL, IJXX, ICALL, ISYSCALL };
+    bool need_valC = isIn(f_icode, c,6);
     if (need_valC) {
         f_valC = 0;
         for(int i=0;i<4;++i)
         {
-            f_valC += readmem(f_valP++,error)<<(i*8);
+           f_valC += readmem_byte(f_valP++,core_error)<<(i*8);
+        }
+        if(f_icode == ISYSCALL){
+            sys_call_num = f_valC;
         }
     }
 

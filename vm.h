@@ -16,7 +16,14 @@ public:
         cpu = _cpu;
         pid = _pid;
         mem = _mem;
+        status = R;
     }
+
+    VM(Mem *_mem){
+        mem = _mem;
+        status = S;
+    }
+
 
     static const int PAGE_SIZE = 4096;
     static const int INVALID = 0;
@@ -28,6 +35,7 @@ public:
     int error = 0;
     //associated cpu
     CPU* cpu;
+    int corenum;
     Mem* mem;
     //heap,stack,args,envp
     WORD heap_low,heap_high,mmap_low,mmap_high,stack_low,stack_high;
@@ -35,6 +43,8 @@ public:
     //kernal stack
     int pid;
     int status;
+    //slow syscall waiting
+    int stall_clk = 0;
     Core* saved_core = NULL;
 
     //for display
@@ -57,7 +67,27 @@ public:
     std::map<WORD,int> pgd_valid;
     std::list<VM_AREA_STRUCT> vm_area;
 
-    void init();
+    int activate(CPU* _cpu,int _corenum){
+        if(status != T){
+            cpu = _cpu;
+            corenum = _corenum;
+            status = R;
+            return 1;
+        }
+        else
+            return 0;
+    }
+    void stop(){
+        cpu = NULL;
+        corenum = -1;
+        status = S;
+    }
+    void terminate(){
+        cpu = NULL;
+        corenum = -1;
+        status = T;
+    }
+
 
     void allocate_page_pte(WORD vm_addr,int &error);
 
@@ -65,7 +95,7 @@ public:
 
     inline WORD phy_addr(WORD vm_addr);
 
-    WORD allocate_section(std::string section_name,WORD start_vm_addr,BYTE* data,int data_byte,int prot,int flag,int &error);
+    WORD allocate_section(std::string section_name,WORD start_vm_addr,BYTE* data,int data_byte,int prot,int flag,int &error,int init=true);
 
     WORD read(WORD vm_addr,int &error,int &src);
     void write(WORD vm_addr,int &error,int &src,BYTE byte);

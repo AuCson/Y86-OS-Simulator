@@ -181,6 +181,12 @@ void MainWindow::disass(std::string s)
             ui->tdisas->setItem(r,1,new QTableWidgetItem("leave"));
             i+=2;
             break;
+        case 'E':
+            if(i+9>=s.size()){i+=10;segerr = 1;break;}
+            sprintf(buf,"syscall 0x%x",gethex(s,i+2,8));
+            ui->tdisas->setItem(r,1,new QTableWidgetItem(buf));
+            i+=10;
+            break;
         default:
             ui->tdisas->setItem(r,1,new QTableWidgetItem("???"));
             i+=2;
@@ -206,15 +212,25 @@ void MainWindow::f_pc_show(int noupdate,Core *Logic)
             ui->tdisas->item(i,0)->setFont(QFont("ubuntu",9,QFont::Normal));
             ui->tdisas->item(i,2)->setText("");
         }
+        else{
+            for(int j =0;j<3;++j){
+                if(ui->tdisas->item(i,j)==NULL)
+                    ui->tdisas->setItem(i,j,new QTableWidgetItem());
+
+            }
+        }
     }
     int x;
-    int r;
+    int r = 0;
 
     if(!noupdate)
     {
         for(int i =0;i<100;++i)
         {
-            QString t = ui->tdisas->item(i,0)->text();
+            int cnt = ui->tdisas->rowCount();
+            QTableWidgetItem* item = ui->tdisas->item(i,0);
+            QString t = item->text();
+
             if(t.isEmpty())
                 break;
             sscanf(t.toStdString().c_str(),"%x",&x);
@@ -224,6 +240,7 @@ void MainWindow::f_pc_show(int noupdate,Core *Logic)
                 r = -1;
                 break;
             }
+
             if(x == Logic->f_pc)
             {
                 r = i;
@@ -267,11 +284,23 @@ void MainWindow::f_pc_show(int noupdate,Core *Logic)
 
 }
 
-void MainWindow::cpu_viewer(){
+void MainWindow::cpu_viewer(int cpu_id,int corenum){
     //debug
-    current_cpu = kernel->cpu_set[0];
-    Core* core = current_cpu->core[current_core_num];
+    if(cpu_id == -1 || cpu_id >= kernel->cpu_set.size()){
+        ui->tdisas->clear();
+        return;
+    }
 
+    CPU* current_cpu = kernel->cpu_set[cpu_id];
+    if(corenum >= current_cpu->corenum){
+        ui->tdisas->clear();
+        return;
+    }
+    Core* core = current_cpu->core[corenum];
+    if(core->vm == NULL){
+        ui->tdisas->clear();
+        return;
+    }
     std::string text = core->vm->elf_text;
 
     disass(text);

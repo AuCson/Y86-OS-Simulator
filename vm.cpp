@@ -32,30 +32,37 @@ inline WORD VM::phy_addr(WORD vm_addr){
      return physical_addr;
 }
 
-WORD VM::allocate_section(std::string section_name,WORD start_vm_addr,BYTE* data,int data_byte,int prot,int flag,int &error){
-    if(start_vm_addr % 4096 != 0){
+WORD VM::allocate_section(std::string section_name,WORD start_vm_addr,BYTE* data,int data_byte,int prot,int flag,int &error,int init){
+    /*if(start_vm_addr % 4096 != 0){
         error = 1;
         return 0;
-    }
+    }*/
+    start_vm_addr = (start_vm_addr+1) & 0xFFFFFFFC; //4 byte align
     VM_AREA_STRUCT* area = new VM_AREA_STRUCT();
     area->start = start_vm_addr;
     WORD addr;
+
     for(addr = start_vm_addr;addr<start_vm_addr+data_byte;addr+=4096){
-        allocate_page_pte(addr,error);
+        WORD page_id = addr & 0xFFFFF000;
+        if(!pgd.count(page_id) || !pgd_valid[page_id]){
+            allocate_page_pte(addr,error);
+        }
     }
-    area->end = addr;
+    area->end = start_vm_addr + data_byte;
     area->section_name = section_name;
     area->prot = VM::VM_AREA_STRUCT::RW;
     area->flags = flag;
     vm_area.push_back(*area); //vm_area.prot
-    for(int i =0;i<data_byte;++i){
-        int src;
-        write(start_vm_addr+i,error,src,data[i]);
+    if(init){
+        for(int i =0;i<data_byte;++i){
+            int src;
+            write(start_vm_addr+i,error,src,data[i]);
+        }
     }
     vm_area.pop_back();
     area->prot = prot;
     vm_area.push_back(*area);
-    return addr;//next available page
+    return start_vm_addr + data_byte;//next available address
 }
 
 WORD VM::read(WORD vm_addr,int &error,int &src){
@@ -118,15 +125,4 @@ void VM::write(WORD vm_addr,int &error,int &src,BYTE byte){
     }
     error = 1;
     return;
-}
-
-void VM::init(){
-    ELF* start_script = new ELF();
-    start_script->load_from_strings(
-                std::string("70000000"),//jmp 0x0
-                std::string("80808080"),
-                std::string("FFFFFFFF")
-                );
-    int error = 0;
-    yexecve(error,start_script,this);
 }

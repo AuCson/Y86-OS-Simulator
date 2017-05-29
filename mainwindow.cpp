@@ -7,6 +7,8 @@ MainWindow::MainWindow(QWidget *parent) :
 {
     ui->setupUi(this);
     startup();
+
+    hardware_tree_viewer();
 }
 
 MainWindow::~MainWindow()
@@ -16,19 +18,14 @@ MainWindow::~MainWindow()
 
 void MainWindow::startup(){
     kernel = new Kernel();
-    context_switch(error,NULL,kernel->pid_set[1],kernel->cpu_set[0],0);
+    kernel->context_switch(error,NULL,kernel->pid_set[1],kernel->cpu_set[0],0);
+    kernel->add_log("Starting Y86-OS simulator",Kernel::Style::IMPORTANT);
 }
 
 void MainWindow::clk(){
-    for(size_t i = 0;i<kernel->cpu_set.size();++i){
-        CPU* cpu = kernel->cpu_set[i];
-        for(int j = 0;j<cpu->corenum;++j){
-            Core* core = cpu->core[j];
-            core->single_run();
-            cpu_viewer();
-
-        }
-    }
+    kernel->cycle();
+    cpu_viewer(current_cpu_id,current_core_num);
+    show_log();
 }
 
 

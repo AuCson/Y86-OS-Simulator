@@ -32,7 +32,8 @@ SOURCES += main.cpp\
     ysyscall.cpp \
     vm.cpp \
     kernel.cpp \
-    y86ui.cpp
+    y86ui.cpp \
+    hardwareui.cpp
 
 HEADERS  += mainwindow.h \
     csapp.h \
@@ -47,3 +48,5 @@ HEADERS  += mainwindow.h \
     kernel.h
 
 FORMS    += mainwindow.ui
+
+DISTFILES +=

@@ -2,9 +2,10 @@
 #include "vm.h"
 #include "cpu.h"
 #include "elf.h"
+#include "kernel.h"
 #include <set>
-
-int yfork(int &error,int parent_pid,std::map<int,VM*>* pid_map,VM *old_vm){
+#include <map>
+int Kernel::yfork(int &error,int parent_pid,std::map<int,VM*>* pid_map,VM *old_vm){
     int new_pid;
     for(int i=1;;++i){
         if(pid_map->count(i)==0){
@@ -27,7 +28,7 @@ int yfork(int &error,int parent_pid,std::map<int,VM*>* pid_map,VM *old_vm){
     return new_pid;
 }
 
-int yexecve(int &error,ELF* elf,VM* vm){
+void Kernel::yexecve(int &error,ELF* elf,VM* vm){
     //destroy the user-space of the VM
     for(auto i = vm->pgd.begin();i!=vm->pgd.end();++i){
         WORD vm_addr = i->first;
@@ -46,24 +47,10 @@ int yexecve(int &error,ELF* elf,VM* vm){
     }
     next_addr = vm->allocate_section("bss",next_addr,bss,elf->bss_len,
                                      VM::VM_AREA_STRUCT::RW,VM::VM_AREA_STRUCT::PRIVATE,error);
+    next_addr = vm->allocate_section("stack",0x3FF00000,NULL,0x100000,VM::VM_AREA_STRUCT::RW,VM::VM_AREA_STRUCT::PRIVATE,error,false);
+
 
     vm->heap_low = vm->heap_high = next_addr;
-    vm->stack_low = vm->stack_high = 0x80000000;
+    vm->stack_low = vm->stack_high = 0x40000000;
     vm->elf_text = elf->string_text;
-}
-
-int context_switch(int &error,VM* old_vm,VM* new_vm,CPU* cpu,int running_core){
-    Core* core = cpu->core[running_core];
-    if(old_vm!=NULL){
-        old_vm->saved_core = core;
-    }
-    if(new_vm->saved_core!=NULL){
-        cpu->core[running_core] = new_vm->saved_core;
-    }
-    else{
-        cpu->core[running_core] = new Core(cpu);
-        cpu->core[running_core]->REG[4]=cpu->core[running_core]->REG[5] = new_vm->stack_high;
-    }
-    cpu->core[running_core]->vm = new_vm;
-
 }
