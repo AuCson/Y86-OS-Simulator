@@ -2,7 +2,7 @@
 #define BIT_H
 #define WORD_SIZE 32
 typedef unsigned WORD;
-typedef char BYTE;
+typedef unsigned char BYTE;
 
 WORD get_bit(WORD w,int low,int high);
 

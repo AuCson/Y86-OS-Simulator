@@ -7,6 +7,7 @@
 #include "vm.h"
 #include <map>
 #include <vector>
+#include <cstdio>
 #define MAX_CORE 4
 
 class CPU{
@@ -18,7 +19,7 @@ public:
     {
         core[0] = new Core(this);
         corenum = 1;
-        l1cache = new L1Cache(all_l1_cache,mem);
+        l1cache = new L1Cache(all_l1_cache,_mem);
         cpu_set->push_back(this);
         mem = _mem;
     }
@@ -29,12 +30,17 @@ public:
 
     WORD read(WORD physical_addr,int &error,int &src)
     {
+        if(error)
+            return 0;
         int terror = 0;
         WORD value = l1cache->read(physical_addr,terror);
         src = L1CACHE;
         if(terror == 1){ //no hit
-            value = mem->read(physical_addr,terror);
+            if(physical_addr == 0)
+                int a = 3;
             l1cache->burst_load(physical_addr,terror);
+            //printf("1");
+            value = mem->read(physical_addr,terror);
             src = MEM;
         }
         return value;

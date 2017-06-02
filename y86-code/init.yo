@@ -1,0 +1,57 @@
+  0x000:              | elf_header:
+  0x000: ab000000     | .long section_table
+                      | 
+  0x004:              | text:
+  0x004:              | loop:
+  0x004: 308003000000 | irmovl $0x3, %eax	#syscall num is 3 - read
+  0x00a: 308300000000 | irmovl $0x0, %ebx 	#fd is 0 - stdin
+  0x010: 308101000000 | irmovl $0x1, %ecx 	#read 1 char
+  0x016: 308400000040 | irmovl $0x40000000,%esp #reset stack
+  0x01c: 2042         | rrmovl %esp, %edx	#get ready to read to stack
+  0x01e: a038         | pushl %ebx		#esp -4
+  0x020: e0000000     | .long 0x000000e0
+  0x024: 00           | .byte 0			#syscall = 3, fd = 0, readnum = 1, read to stack
+  0x025: 506404000000 | mrmovl 4(%esp), %esi
+  0x02b: 30877b000000 | irmovl $0x7b, %edi	#if the char is '{'
+  0x031: 6176         | subl %edi,%esi
+  0x033: 7404000000   | jne loop		#found something to execve
+  0x038: 308002000000 | irmovl $0x2,%eax	#syscall num is 2 - fork
+  0x03e: e0000000     | .long 0x000000e0
+  0x042: 00           | .byte 0
+  0x043: 6200         | andl %eax,%eax		#am i child process?
+  0x045: 7404000000   | jne loop		#if not, go to the beginning
+  0x04a: 3082fcff0040 | irmovl $0x4000fffc, %edx
+  0x050:              | loop2:	
+  0x050: 308003000000 | irmovl $0x3, %eax		#syscall = 3, fd = 1, readnum = 1, read to sys_arg section
+  0x056: e0000000     | .long 0x000000e0
+  0x05a: 00           | .byte 0
+  0x05b: 507200000000 | mrmovl (%edx),%edi	#get the char read just now
+  0x061: 308604000000 | irmovl $0x4, %esi	
+  0x067: 6162         | subl %esi, %edx		#buf[i++]
+  0x069: 30867d000000 | irmovl $0x7d, %esi	#if the char is '}'
+  0x06f: 6176         | subl %edi,%esi		#arg input finish
+  0x071: 7450000000   | jne loop2
+  0x076: 308100000000 | irmovl $0x0, %ecx
+  0x07c: 401204000000 | rmmovl %ecx, 4(%edx)	#replace } with \0
+  0x082: 3083fcff0040 | irmovl $0x4000fffc, %ebx
+  0x088: 403200000000 | rmmovl %ebx, 0(%edx)	#store argv[0]
+  0x08e: 4012fcffffff | rmmovl %ecx, -4(%edx)	#store argv[1] = NULL
+  0x094: 308604000000 | irmovl $0x4, %esi
+  0x09a: 2023         | rrmovl %edx, %ebx	#char **argv point at argv[0]
+  0x09c: 30800b000000 | irmovl $0xb, %eax	#syscall = 11(execve), argument = %ebx
+  0x0a2: e0000000     | .long 0x000000e0
+  0x0a6: 00           | .byte 0
+  0x0a7:              | data:
+  0x0a7: cdabcdab     | .long 0xabcdabcd
+  0x0ab:              | rodata:
+  0x0ab:              | bss:
+  0x0ab:              | section_table:
+  0x0ab:              | text_offset:
+  0x0ab: 04000000     | .long text
+  0x0af:              | data_offset:
+  0x0af: a7000000     | .long data
+  0x0b3:              | rodata_offset:
+  0x0b3: ab000000     | .long rodata
+  0x0b7:              | bss_offset:
+  0x0b7: ab000000     | .long bss
+                      | 

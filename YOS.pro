@@ -33,7 +33,8 @@ SOURCES += main.cpp\
     vm.cpp \
     kernel.cpp \
     y86ui.cpp \
-    hardwareui.cpp
+    hardwareui.cpp \
+    fileui.cpp
 
 HEADERS  += mainwindow.h \
     csapp.h \

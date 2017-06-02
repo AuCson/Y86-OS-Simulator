@@ -12,6 +12,7 @@ void Core::init()
 
     //Fetch
     f_predPC = F_predPC = f_pc = f_icode = f_ifun =f_valC = f_valP = 0;
+    f_predPC = 4;
     f_stat = SAOK;
 
     //Decode
@@ -36,6 +37,8 @@ void Core::init()
     W_stat = SAOK;
 
     funcid = 0;
+
+    signal_suspend = 0;
 
     stat = SAOK;
     mem_write = false;
@@ -127,16 +130,16 @@ int Core::alucalc(int aluA,int aluB,int alufun,bool setcc)
 
 void Core::writemem(int addr,int val,int& error) //WORD write
 {
-    if(addr < 0 || addr >= (1<<16))
-    {
-        error = 1;
-        return;
-    }
     sprintf(buf,"M:Write Memory at %x to %x",addr,val);
+    error = 0;
     logs.push_front((std::string)buf);
     for(int i=0;i<4;++i)
     {
+        if(1073741820==addr)
+            int a = 1;
         vm->write(addr,error,mem_src,val & 0xFF);
+        if(error)
+            return;
         //mem[addr] = val & 0xFF;
         val >>= 8;
         ++addr;
@@ -147,15 +150,15 @@ void Core::writemem(int addr,int val,int& error) //WORD write
 
 int Core::readmem(int addr,int &error)
 {
-    if(addr < 0 || addr >= (1<<16))
-    {
-        error = 1;
-        return 0;
-    }
+    error =0;
     int res = 0;
     int src;
     for(int i=0;i<4;++i)
     {
+        if(error)
+            return 0;
+        if(addr ==1073807356 )
+            int a=  1;
         int t_res = vm->read(addr,error,src);
         if(error)
             return 0;
@@ -169,6 +172,7 @@ int Core::readmem(int addr,int &error)
 }
 
 unsigned char Core::readmem_byte(int addr,int &error){
+    error = 0;
     int res = 0;
     int src;
     res = vm->read(addr,error,src);
@@ -185,6 +189,12 @@ void Core::PipeLogic()
     int b[] = { d_srcA, d_srcB };
     int c[] = { D_icode, E_icode, M_icode };
     F_stall = (isIn(E_icode, a,3)  && isIn(E_dstM, b,2))  || isIn(IRET, c,3);
+    if(signal_suspend){
+        //kernel ask the process to suspend
+        signal_suspend = 0;
+        F_stall = true;
+        f_stat = SSPD;
+    }
     if(F_stall)
     {
         sprintf(buf,"PipeLogic:F_stall");
@@ -221,17 +231,17 @@ void Core::PipeLogic()
         logs.push_front((std::string)buf);
     }
 
-    int k[] = { SADR, SINS, SHLT, SSYS };
-    int l[] = { SADR, SINS, SHLT, SSYS };
-    M_bubble = isIn(m_stat, k,3) || isIn(W_stat, l,3);
+    int k[] = { SADR, SINS, SHLT, SSYS, SSPD };
+    int l[] = { SADR, SINS, SHLT, SSYS, SSPD };
+    M_bubble = isIn(m_stat, k,5) || isIn(W_stat, l,5);
     if(M_bubble)
     {
         sprintf(buf,"PipeLogic:M_bubble");
         logs.push_front((std::string)buf);
     }
 
-    int m[] = { SADR, SINS, SHLT, SSYS };
-    W_stall = isIn(W_stat,m,3);
+    int m[] = { SADR, SINS, SHLT, SSYS,SSPD };
+    W_stall = isIn(W_stat,m,5);
     if(W_stall)
     {
         sprintf(buf,"PipeLogic:W_stall");
@@ -301,7 +311,8 @@ void Core::stageM()
     // Should read
     int c[4] = { IMRMOVL, IPOPL, IRET, ILEAVE };
     mem_read = isIn(M_icode,c,4);
-
+    if(mem_addr == 0x4000FFF4)
+        int aa = 0;
     // Should write
     int d[3] = { IRMMOVL, IPUSHL, ICALL };
     mem_write = isIn(M_icode, d,3);
@@ -394,9 +405,9 @@ void Core::stageE()
     else
         alufun = ALUADD;
 
-    int g[] = { SADR, SINS, SHLT, SSYS };
-    int h[] =  { SADR, SINS, SHLT, SSYS };
-    bool set_cc = (E_icode == IOPL || E_icode == ICMPL) && (!isIn(m_stat, g,3)) && (!isIn(W_stat, h,3));
+    int g[] = { SADR, SINS, SHLT, SSYS,SSPD };
+    int h[] =  { SADR, SINS, SHLT, SSYS,SSPD };
+    bool set_cc = (E_icode == IOPL || E_icode == ICMPL) && (!isIn(m_stat, g,5)) && (!isIn(W_stat, h,5));
 
     e_valE = alucalc(aluA, aluB, alufun, set_cc);
     e_cnd = getcnd(E_ifun);
@@ -441,6 +452,7 @@ updateD:
     int a[5] = { IRRMOVL, IRMMOVL, IOPL, IPUSHL, ICMPL };
     int b[2] = { IPOPL, IRET };
     int b2[1] = {ILEAVE};
+
     if (isIn(D_icode, a,5))
         d_srcA = D_rA;
     else if (isIn(D_icode, b,2))
@@ -453,7 +465,9 @@ updateD:
     if(d_srcA != RNONE){
         d_rvalA = REG[d_srcA];
     }
-
+    if(d_srcA==12){
+        int a = 1;
+    }
 
     int c[4] = { IOPL, IRMMOVL, IMRMOVL,ICMPL };
     int d[4] = { IPUSHL, IPOPL, ICALL, IRET };
@@ -628,7 +642,7 @@ updateF:
     //update syscall
     else if (f_icode == ISYSCALL)
         f_stat = SSYS;
-    else
+    else if(f_stat != SSPD)
         f_stat = SAOK;
 
 
@@ -650,9 +664,6 @@ updateF:
         {
            f_valC += readmem_byte(f_valP++,core_error)<<(i*8);
         }
-        if(f_icode == ISYSCALL){
-            sys_call_num = f_valC;
-        }
     }
 
     int d[] = { IJXX, ICALL };
@@ -663,6 +674,10 @@ updateF:
 
     if(f_icode == ICALL)
         funcid = f_predPC;
+
+    if(f_stat == SSYS || f_stat == SSPD){
+        this->saved_pc = f_predPC;
+    }
 }
 
 void Core::single_run(){

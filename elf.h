@@ -5,24 +5,23 @@
 #include <string>
 class ELF{
 public:
-    struct ELFHeader{
-        WORD section_header_off;
-    };
     char *text = NULL;
     char *data = NULL;
     char *rodata = NULL;
-    char text_len,data_len,rodata_len,bss_len;
+    int text_len,data_len,rodata_len,bss_len;
 
     std::string string_text;
+
+    void parse_from_binary(BYTE* buf,int buf_len);
 
     void load_from_strings(std::string _text,std::string _data,std::string _rodata){
         text = new char[_text.size()];
         data = new char[_data.size()];
         rodata = new char[_rodata.size()];
         string_text = _text;
-        text_len = _text.size();
-        data_len = _data.size();
-        rodata_len = _rodata.size();
+        text_len = _text.size()/2;
+        data_len = _data.size()/2;
+        rodata_len = _rodata.size()/2;
         for(size_t i=0;i<_text.size();i+=2){
             char buf[3];
             buf[0] = _text[i];

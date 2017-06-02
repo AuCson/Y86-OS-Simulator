@@ -10,6 +10,8 @@
 typedef WORD VMADDR;
 class CPU;
 class Core;
+class Kernel;
+class OpenFileTable;
 class VM{
 public:
     VM(CPU* _cpu,int _pid,Mem *_mem){
@@ -45,6 +47,13 @@ public:
     int status;
     //slow syscall waiting
     int stall_clk = 0;
+    //fd ref
+    OpenFileTable* fd_set[512] = {0};
+
+    int saved = 0;
+    int saved_reg[8];
+    int saved_pc;
+    int syscall_return;
     Core* saved_core = NULL;
 
     //for display
@@ -94,7 +103,7 @@ public:
     void free_page_pte(WORD vm_addr,int &error);
 
     inline WORD phy_addr(WORD vm_addr);
-
+    WORD read(WORD vm_addr, int &error, int &src, WORD& physical_addr);
     WORD allocate_section(std::string section_name,WORD start_vm_addr,BYTE* data,int data_byte,int prot,int flag,int &error,int init=true);
 
     WORD read(WORD vm_addr,int &error,int &src);

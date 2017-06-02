@@ -1,0 +1,34 @@
+  0x000:              | elf_header:
+  0x000: 37000000     | .long section_table
+                      | 
+  0x004:              | text:
+  0x004: 308004000000 | irmovl $0x4, %eax	#syscall num is 4 - write
+  0x00a: 308301000000 | irmovl $0x1, %ebx 	#fd is 1
+  0x010: 308105000000 | irmovl $0x5, %ecx 	#read 5 numbers
+  0x016: 308232000000 | irmovl data, %edx	#start from data + 0x0
+  0x01c: 00           | .byte 0
+  0x01d: 000000e0     | .long 0xe0000000	#syscall
+  0x021: 308300000000 | irmovl $0x0, %ebx	#exit arg is 0
+  0x027: 308001000000 | irmovl $0x1, %eax 	#syscall num is 1 - exit
+  0x02d: 00           | .byte 0
+  0x02e: 000000e0     | .long 0xe0000000	#syscall
+                      | 
+                      | 
+  0x032:              | data:
+  0x032: 68           | .byte 0x68		
+  0x033: 65           | .byte 0x65
+  0x034: 6c           | .byte 0x6c
+  0x035: 6c           | .byte 0x6c
+  0x036: 6f           | .byte 0x6f
+  0x037:              | rodata:
+  0x037:              | bss:
+  0x037:              | section_table:
+  0x037:              | text_offset:
+  0x037: 04000000     | .long text
+  0x03b:              | data_offset:
+  0x03b: 32000000     | .long data
+  0x03f:              | rodata_offset:
+  0x03f: 37000000     | .long rodata
+  0x043:              | bss_offset:
+  0x043: 37000000     | .long bss
+                      | 

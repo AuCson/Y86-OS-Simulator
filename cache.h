@@ -86,6 +86,8 @@ public:
         WORD idx = get_bit(physical_addr,b_value,s_value+b_value-1);
         WORD offset = get_bit(physical_addr,0,b_value-1);
         WORD tag_t = get_bit(physical_addr,s_value+b_value,WORD_SIZE-1);
+        if(idx == 0 && offset == 0)
+            int a = 2;
         if(valid[idx]!=E)
             valid[idx] = E;
         for(auto i = all_l1_cache->begin();i!=all_l1_cache->end();++i)
@@ -98,7 +100,11 @@ public:
                 }
             }
         }
+        if(tag[idx]!=tag_t){
+            immediate_write((tag[idx]<<s_value+b_value) | (idx<<b_value) | offset,error);
+        }
         block[idx][offset] = byte;
+        tag[idx] = tag_t;
         valid[idx] = M;
     }
 };

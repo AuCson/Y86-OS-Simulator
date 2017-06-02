@@ -22,17 +22,18 @@ public:
     }
 
     CPU *cpu;
-    VM* vm;
+    VM* vm = NULL;
     int mem_src;
     int context_switching = 0;
     int core_error;
     int sys_call_num = -1;
+    int saved_pc;
 
     //Stat
     const int IHALT = 0,INOP = 1,IRRMOVL = 2, IIRMOVL = 3,IRMMOVL = 4,IMRMOVL = 5,IOPL = 6,
             IJXX = 7,ICALL = 8,IRET = 9,IPUSHL = 0xA, IPOPL = 0xB, ICMPL = 0xC, ILEAVE = 0xD,ISYSCALL = 0xE;
     const int REAX = 0,RECX = 1,REDX = 2,REBX = 3,RESP = 4,REBP = 5,RESI = 6,REDI = 7,RNONE = 0xF;
-    const int SBUB = 0,SAOK = 1,SHLT = 2,SADR = 3,SINS = 4,SSYS=5;
+    const int SBUB = 0,SAOK = 1,SHLT = 2,SADR = 3,SINS = 4,SSYS=5,SSPD = 6;
     const int ALUADD = 0,ALUSUB = 1,ALUAND = 2,ALUXOR =3;
     std::string regname[9];
 
@@ -62,6 +63,7 @@ public:
 
     //Bubble and Stall
     bool F_stall,F_bubble,D_stall,D_bubble,E_stall,E_bubble,M_stall,M_bubble,W_stall,W_bubble;
+    int signal_suspend;
 
     //Registers
     int REG[8];

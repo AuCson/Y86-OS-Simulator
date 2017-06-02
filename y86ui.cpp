@@ -57,7 +57,7 @@ inline QString asciireg(char c)
 
 std::string regname(int i,int &error)
 {
-    std::string name[9] = {"%eax","%ecx","%edx","%ecx","%esp","%ebp","%esi","%edi","???"};
+    std::string name[9] = {"%eax","%ecx","%edx","%ebx","%esp","%ebp","%esi","%edi","???"};
     if(i<8 && i>=0)
         return name[i];
     else
@@ -181,7 +181,7 @@ void MainWindow::disass(std::string s)
             ui->tdisas->setItem(r,1,new QTableWidgetItem("leave"));
             i+=2;
             break;
-        case 'E':
+        case 'E':case 'e':
             if(i+9>=s.size()){i+=10;segerr = 1;break;}
             sprintf(buf,"syscall 0x%x",gethex(s,i+2,8));
             ui->tdisas->setItem(r,1,new QTableWidgetItem(buf));
@@ -297,12 +297,73 @@ void MainWindow::cpu_viewer(int cpu_id,int corenum){
         return;
     }
     Core* core = current_cpu->core[corenum];
-    if(core->vm == NULL){
+    VM* vm = current_cpu->core[corenum]->vm;
+    vm_area_log(vm);
+    if(vm == NULL){
         ui->tdisas->clear();
         return;
     }
     std::string text = core->vm->elf_text;
 
     disass(text);
+    reg_log(core);
     f_pc_show(0,core);
+    current_vm = kernel->cpu_set[cpu_id]->core[corenum]->vm;
+
 }
+
+void MainWindow::reg_log(Core *core){
+    QString str;
+    for(int i = 0;i<8;++i){
+        int error = 0;
+        char buf[100];
+        sprintf(buf,"%s:\t0x%x\n",regname(i,error).c_str(),core->REG[i]);
+        str.append(buf);
+    }
+    ui->Reglog->setText(str);
+}
+
+void MainWindow::vm_area_log(VM* vm){
+    QString str;
+    if(vm == NULL){
+        ui->vm_area->clear();
+        return;
+    }
+    char prot_name[5][20] = {"","READ ONLY","WRITE ONLY","RW","COPY-ON-WRITE"};
+    char flag_name[2][20] = {"SHARED","PRIVATE"};
+    for(auto i = vm->vm_area.begin();i!=vm->vm_area.end();++i){
+        VM::VM_AREA_STRUCT area = *i;
+        char buf[1000];
+        sprintf(buf,".%s\t0x%x~0x%x,%s,%s\n",area.section_name.c_str(),area.start,area.end,
+               prot_name[area.prot],flag_name[area.flags]);
+        str.append(buf);
+    }
+    ui->vm_area->setText(str);
+}
+
+void MainWindow::print_stdout(){
+    static int last_pos = 0;
+    Vnode* vnode = kernel->vnode_list[1];
+    if(last_pos == vnode->filesize)
+        return;
+    char buf[10000];
+    for(int i=last_pos;i<vnode->filesize;++i){
+        buf[i] = vnode->file_content[i];
+    }
+    last_pos = vnode->filesize;
+    buf[vnode->filesize] = 0;
+    ui->console->append(buf);
+}
+
+void MainWindow::show_log(){
+    if(kernel->log.size())
+        ui->console->append(kernel->log);
+    kernel->log.clear();
+}
+
+void MainWindow::cycle_ui(){
+    cpu_viewer(current_cpu_id,current_core_num);
+    print_stdout();
+}
+
+

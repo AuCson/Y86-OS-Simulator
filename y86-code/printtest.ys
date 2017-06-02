@@ -1,0 +1,34 @@
+elf_header:
+.long section_table
+
+text:
+irmovl $0x4, %eax	#syscall num is 4 - write
+irmovl $0x1, %ebx 	#fd is 1
+irmovl $0x5, %ecx 	#read 5 numbers
+irmovl data, %edx	#start from data + 0x0
+.byte 0
+.long 0xe0000000	#syscall
+irmovl $0x0, %ebx	#exit arg is 0
+irmovl $0x1, %eax 	#syscall num is 1 - exit
+.byte 0
+.long 0xe0000000	#syscall
+
+
+data:
+.byte 0x68		
+.byte 0x65
+.byte 0x6c
+.byte 0x6c
+.byte 0x6f
+rodata:
+bss:
+section_table:
+text_offset:
+.long text
+data_offset:
+.long data
+rodata_offset:
+.long rodata
+bss_offset:
+.long bss
+

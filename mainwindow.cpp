@@ -18,13 +18,15 @@ MainWindow::~MainWindow()
 
 void MainWindow::startup(){
     kernel = new Kernel();
+    connect(ui->t_addr,SIGNAL(cellClicked(int,int)),this,SLOT(show_addr_slot(int,int)));
     kernel->context_switch(error,NULL,kernel->pid_set[1],kernel->cpu_set[0],0);
     kernel->add_log("Starting Y86-OS simulator",Kernel::Style::IMPORTANT);
+    refresh_file_list();
 }
 
 void MainWindow::clk(){
     kernel->cycle();
-    cpu_viewer(current_cpu_id,current_core_num);
+    cycle_ui();
     show_log();
 }
 
@@ -33,4 +35,60 @@ void MainWindow::clk(){
 void MainWindow::on_step_clicked()
 {
     clk();
+}
+
+void MainWindow::on_add_cpu_clicked()
+{
+    kernel->add_cpu();
+    hardware_tree_viewer();
+}
+
+void MainWindow::on_cmd_btn_clicked()
+{
+    QString text = ui->cmd_input->text();
+    if(text.size()!=0){
+        stdin_readline(text);
+    }
+}
+
+void MainWindow::on_load_ascii_clicked()
+{
+    load_ascii_file();
+    refresh_file_list();
+}
+
+void MainWindow::on_load_bin_clicked()
+{
+    load_binary_file();
+    refresh_file_list();
+}
+
+void MainWindow::on_b_parse_elf_clicked()
+{
+    parse_elf_ui();
+}
+
+void MainWindow::on_b_run_clicked()
+{
+    running = !running;
+    autorun_handler();
+}
+
+void MainWindow::autorun_handler()
+{
+    int speed = 10000;
+    while(running)
+    {
+        QElapsedTimer t;
+        t.start();
+        while(t.elapsed() * speed<10000)
+            QApplication::processEvents();
+        clk();
+        if(!running)
+        {
+            running =0;
+            break;
+        }
+    }
+
 }
