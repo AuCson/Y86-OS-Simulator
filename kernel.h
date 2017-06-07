@@ -78,12 +78,15 @@ public:
     int yread(int &error,int fd,int charnum,WORD store_vm_addr,VM* vm);
     int ywrite(int &error,int fd,int charnum,WORD store_vm_addr,VM* vm);
     int yexecve_wrapper(BYTE **argv, int argc, VM* vm, int &error);
+    int ywaitpid(int &error, VM* vm,int pid);
+    int waitpid_stall(VM* vm);
 
     void add_cpu();
     void add_log(QString text,int type);
 
     void test();
-
+    int block_minor = 0;
+    int block_normal = 0;
     struct Style{
         static const int NORMAL = 0;
         static const int CRITICAL = 1;
@@ -97,8 +100,17 @@ public:
         static const int READ = 3;
         static const int WRITE = 4;
         static const int OPEN = 5;
+        static const int WAITPID = 7;
         static const int EXECVE = 11;
+        static const int MMAP = 90;
     };
+
+    static void* thread_cycle(void *_core){
+        Core* core = (Core*) _core;
+        core->single_run();
+        return NULL;
+    }
+
 };
 
 

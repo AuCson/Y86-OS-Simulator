@@ -299,6 +299,7 @@ void MainWindow::cpu_viewer(int cpu_id,int corenum){
     Core* core = current_cpu->core[corenum];
     VM* vm = current_cpu->core[corenum]->vm;
     vm_area_log(vm);
+    status_log(vm);
     if(vm == NULL){
         ui->tdisas->clear();
         return;
@@ -339,6 +340,8 @@ void MainWindow::vm_area_log(VM* vm){
         str.append(buf);
     }
     ui->vm_area->setText(str);
+
+
 }
 
 void MainWindow::print_stdout(){
@@ -348,10 +351,11 @@ void MainWindow::print_stdout(){
         return;
     char buf[10000];
     for(int i=last_pos;i<vnode->filesize;++i){
-        buf[i] = vnode->file_content[i];
+        buf[i-last_pos] = vnode->file_content[i];
     }
+    buf[vnode->filesize-last_pos] = 0;
     last_pos = vnode->filesize;
-    buf[vnode->filesize] = 0;
+
     ui->console->append(buf);
 }
 
@@ -364,6 +368,19 @@ void MainWindow::show_log(){
 void MainWindow::cycle_ui(){
     cpu_viewer(current_cpu_id,current_core_num);
     print_stdout();
+}
+
+void MainWindow::status_log(VM* vm){
+    if(vm==NULL)
+        return;
+    ui->l_core->setText(QString::number(vm->corenum));
+    ui->l_cpu->setText(QString::number(vm->cpu->cpu_id));
+    ui->l_pid->setText(QString::number(vm->pid));
+    if(kernel->pid_run_time.count(vm->pid)){
+        ui->l_period->setText(QString::number(kernel->pid_run_time[vm->pid]));
+    }
+    else
+        ui->l_period->setText(QString::number(0));
 }
 
 

@@ -73,11 +73,16 @@ public:
                 }
             }
         }
+        int terror;
+        WORD tag_origin = tag[idx];
+        WORD origin_phy_addr = (tag_origin << (s_value+b_value)) | (idx<<b_value);
+        immediate_write(origin_phy_addr,terror);
         for(int i = low;i<high;++i)//i: physical addr
         {
             WORD offset = get_bit(i,0,b_value-1);
             block[idx][offset] = mem->read(i,error);
         }
+        tag[idx] = tag_t;
         valid[idx] = S;
     }
 

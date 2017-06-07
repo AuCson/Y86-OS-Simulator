@@ -1,0 +1,107 @@
+  0x000:              | elf_header:
+  0x000: 43010000     | .long section_table
+                      | 
+  0x004:              | text:
+  0x004:              | loop:
+  0x004: 308003000000 | irmovl $0x3, %eax	#syscall num is 3 - read
+  0x00a: 308300000000 | irmovl $0x0, %ebx 	#fd is 0 - stdin
+  0x010: 308101000000 | irmovl $0x1, %ecx 	#read 1 char
+  0x016: 308400000040 | irmovl $0x40000000,%esp #reset stack
+  0x01c: a038         | pushl %ebx		#esp -4
+  0x01e: 403400000000 | rmmovl %ebx, 0(%esp)	#initially zero
+  0x024: 2042         | rrmovl %esp, %edx	#read to 0x3ffffffc
+  0x026: e0000000     | .long 0x000000e0
+  0x02a: 00           | .byte 0			#syscall = 3, fd = 0, readnum = 1, read to stack
+  0x02b: 506400000000 | mrmovl 0(%esp), %esi
+  0x031: 30877b000000 | irmovl $0x7b, %edi	#if the char is '{' or '&'
+  0x037: 6167         | subl %esi,%edi
+  0x039: 7404000000   | jne loop		#found something to execve
+                      | 
+  0x03e: 3082fcff0040 | irmovl $0x4000fffc,%edx
+  0x044: 30833f010000 | irmovl start_addr, %ebx
+  0x04a: 402300000000 | rmmovl %edx,(%ebx)
+  0x050:              | loop2:
+  0x050: 308003000000 | irmovl $0x3,%eax
+  0x056: 308300000000 | irmovl $0x0,%ebx
+  0x05c: 308101000000 | irmovl $0x1,%ecx
+  0x062: e0000000     | .long 0x000000e0
+  0x066: 00           | .byte 0			#read a char
+  0x067: 507200000000 | mrmovl (%edx),%edi	#get the char read just now
+  0x06d: 30867c000000 | irmovl $0x7c,%esi	#if the char is '|' or  '}'
+  0x073: 6176         | subl   %edi,%esi
+  0x075: 7394000000   | je line_end
+  0x07a: 30867d000000 | irmovl $0x7d, %esi
+  0x080: 6176         | subl   %edi,%esi
+  0x082: 7394000000   | je line_end
+  0x087: 308626000000 | irmovl $0x26, %esi
+  0x08d: 6176         | subl   %edi,%esi
+  0x08f: 74d5000000   | jne next_cond
+  0x094:              | line_end:
+  0x094: 403200000000 | rmmovl %ebx,(%edx)	#set to '\0'
+  0x09a: 30833f010000 | irmovl start_addr,%ebx
+  0x0a0: 500300000000 | mrmovl (%ebx),%eax
+  0x0a6: 308600010000 | irmovl $0x100, %esi
+  0x0ac: 6160         | subl   %esi, %eax	#next param from 0x4000fffc, 0x4000fefc, 0x40000fdfc
+  0x0ae: 400300000000 | rmmovl %eax, (%ebx)
+  0x0b4: 2002         | rrmovl %eax, %edx
+  0x0b6: 30867d000000 | irmovl $0x7d, %esi	#if the char is '}' or '&'
+  0x0bc: 6176         | subl   %edi, %esi
+  0x0be: 73e2000000   | je end
+  0x0c3: 308626000000 | irmovl $0x26, %esi
+  0x0c9: 6176         | subl   %edi, %esi
+  0x0cb: 73e2000000   | je end
+                      | 
+  0x0d0: 7050000000   | jmp loop2
+  0x0d5:              | next_cond:
+  0x0d5: 308604000000 | irmovl $0x4, %esi
+  0x0db: 6162         | subl   %esi,%edx
+  0x0dd: 7050000000   | jmp loop2
+  0x0e2:              | end:
+  0x0e2: 308002000000 | irmovl $0x2, %eax	#syscall num is 2 - fork
+  0x0e8: e0000000     | .long 0x000000e0
+  0x0ec: 00           | .byte 0
+  0x0ed: 6200         | andl %eax,%eax		#am i child process?
+  0x0ef: 7313010000   | je child		#if not and not &, wait for the child process
+                      | 
+  0x0f4: 308626000000 | irmovl $0x26, %esi
+  0x0fa: 6176         | subl %edi, %esi
+  0x0fc: 7304000000   | je text
+  0x101: 2003         | rrmovl %eax, %ebx
+  0x103: 308007000000 | irmovl $7, %eax 
+  0x109: e0000000     | .long 0x000000e0	
+  0x10d: 00           | .byte 0			#syscall = 7, waiting_pid = %ebx
+  0x10e: 7004000000   | jmp text
+                      | 
+                      | 
+                      | 
+  0x113:              | child:
+  0x113: 308600000000 | irmovl $0x0, %esi
+  0x119: 406200000000 | rmmovl %esi, (%edx)
+  0x11f: 308604000000 | irmovl $0x4, %esi
+  0x125: 6162         | subl   %esi, %edx
+  0x127: 3082fcff0040 | irmovl $0x4000fffc, %edx 
+  0x12d: 30800b000000 | irmovl $0xb, %eax
+  0x133: 2023         | rrmovl %edx, %ebx
+  0x135: e0000000     | .long 0x000000e0
+  0x139: 00           | .byte 0		
+                      | 
+  0x13a: 00           | nop
+  0x13b: 00           | nop
+  0x13c: 00           | nop
+  0x13d: 00           | nop
+  0x13e: 00           | nop
+  0x13f:              | data:
+  0x13f:              | start_addr:
+  0x13f: cdabcdab     | .long 0xabcdabcd
+  0x143:              | rodata:
+  0x143:              | bss:
+  0x143:              | section_table:
+  0x143:              | text_offset:
+  0x143: 04000000     | .long text
+  0x147:              | data_offset:
+  0x147: 3f010000     | .long data
+  0x14b:              | rodata_offset:
+  0x14b: 43010000     | .long rodata
+  0x14f:              | bss_offset:
+  0x14f: 43010000     | .long bss
+                      | 

@@ -25,14 +25,16 @@ void Kernel::init(){
     //startup_script->load_from_strings("70050000007000000000","FFFFFFFF","FFFFFFFF");
     //startup_script->load_from_strings("30F430000000802000000030F20A000000000000000000000000000000000000E0020000002023","FFFFFFFF","FFFFFFFF");
     //startup_script->load_from_strings("308004000000308301000000308105000000308260000000E000000000308001000000E0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000","68656C6C6F","68656C6C6F");
-    startup_script->load_from_strings("000000003080030000003083000000003081010000003084000000402042a038e00000000050640400000030877b00000061767404000000308002000000e000000000620074040000003082fcff0040308003000000e000000000507200000000308604000000616230867d000000617674500000003081000000004012040000003083fcff00404032000000004012fcffffff308604000000202330800b000000e000000000101010101010","abcdabcd","abcdabcd");
+    startup_script->load_from_strings("10101010308003000000308300000000308101000000308400000040a0384034000000002042e00000000050640000000030877b000000616774040000003082fcff004030833f010000402300000000308003000000308300000000308101000000e00000000050720000000030867c0000006176739400000030867d00000061767394000000308626000000617674d500000040320000000030833f0100005003000000003086000100006160400300000000200230867d000000617673e2000000308626000000617673e2000000705000000030860400000061627050000000308002000000e00000000062007313010000308626000000617673040000002003308007000000e000000000700400000030860000000040620000000030860400000061623082fcff004030800b0000002023e0000000000000000000","abcdabcd","abcdabcd");
+    //startup_script->load_from_strings("","cdabcdab","");
     yexecve(error,startup_script,vm);
 }
 
 void Kernel::context_switch(int &error,VM* old_vm,VM* new_vm,CPU* cpu,int running_core){
     Core* core = cpu->core[running_core];
     if(old_vm!=NULL && !old_vm->saved){
-        old_vm->saved_pc = core->saved_pc;
+        old_vm->saved_pc = core->saved_pc.front();
+        core->saved_pc.pop();
         for(int i = 0;i<8;++i)
             old_vm->saved_reg[i] = core->REG[i];
         old_vm->saved = 1;
@@ -65,13 +67,49 @@ void Kernel::context_switch(int &error,VM* old_vm,VM* new_vm,CPU* cpu,int runnin
 void Kernel::cycle(){
     // run every core
     char buf[1000];
+    int active_num = 0;
+    std::vector<pthread_t> tid_vec;
     for(size_t i = 0;i<cpu_set.size();++i){
         CPU* cpu = cpu_set[i];
         for(int j = 0;j<cpu->corenum;++j){
             Core* core = cpu->core[j];
             if(core->vm!=NULL){
+                active_num ++;
+            }
+        }
+    }
+
+    for(int i =0;i<cpu_set.size();++i){
+        for(int j = 0;j<cpu_set[i]->corenum;++j){
+            Core* core = cpu_set[i]->core[j];
+            if(core->vm!=NULL){
                 core->inslen = core->vm->elf_text.size();
-                core->single_run();
+
+                if(active_num <= 1){
+                    thread_cycle(core);
+                }
+                else{
+                    pthread_t tid;
+                    pthread_create(&tid,NULL,thread_cycle,core);
+                    tid_vec.push_back(tid);
+                }
+            }
+        }
+    }
+    for(int i =0;i<tid_vec.size();++i){
+        pthread_t tid = tid_vec[i];
+        pthread_join(tid,NULL);
+    }
+
+
+
+    for(size_t i = 0;i<cpu_set.size();++i){
+        CPU* cpu = cpu_set[i];
+        for(int j = 0;j<cpu->corenum;++j){
+            Core* core = cpu->core[j];
+            if(core->vm!=NULL){
+
+                //core->single_run();
                 //check syscall or cpu error
                 if(core->stat == core->SSYS){
                     ysyscall_handler(core);
@@ -114,7 +152,7 @@ void Kernel::arrange(){
     std::vector<VM*> waiting;
     for(auto i = pid_set.begin();i!=pid_set.end();++i){
         VM* vm = i->second;
-        if(vm->status == VM::S)
+        if(vm->status == VM::S && !waitpid_stall(vm))
             waiting.push_back(vm);
     }
 
@@ -149,7 +187,7 @@ void Kernel::arrange(){
 
     for(auto i = pid_set.begin();i!=pid_set.end();++i){
         VM* vm = i->second;
-        if((vm->status == VM::R && pid_run_time[vm->pid] > 10)){
+        if((vm->status == VM::R && pid_run_time[vm->pid] > 50)){
             vm->cpu->core[vm->corenum]->signal_suspend = 1;
             if(next_idx == waiting.size())
                 return;
@@ -179,14 +217,15 @@ void Kernel::terminate(VM* vm){
 }
 
 void Kernel::suspend(VM* vm){
-    if(vm->status == VM::T){
+    if(vm == NULL || vm->status == VM::T){
         return;
     }
     vm->status = VM::S;
     Core *core = vm->cpu->core[vm->corenum];
     core->vm = NULL;
     vm->cpu = NULL;
-    vm->saved_pc = core->saved_pc;
+    vm->saved_pc = core->saved_pc.front();
+    core->saved_pc.pop();
     for(int i = 0;i<8;++i){
         vm->saved_reg[i] = core->REG[i];
     }
@@ -205,6 +244,10 @@ void Kernel::add_cpu(){
 }
 
 void Kernel::add_log(QString s,int type){
+    if(type == Style::MINOR && block_minor)
+        return;
+    if(type == Style::NORMAL && block_normal)
+        return;
     if(type!=Style::FILEOUT)
         log.append(">>>");
     if(type == Style::CRITICAL){
@@ -219,6 +262,37 @@ void Kernel::add_log(QString s,int type){
     else{
         log.append(s+"<br/>");
     }
+}
+
+char* ELF::ascii_to_bin(std::string ascii){
+    int len = ascii.size() / 2;
+    char* res = new char[len+1];
+    for(int i =0;i<2*len;i+=2){
+        char xbuf[3];
+        xbuf[0] = ascii[i];
+        xbuf[1] = ascii[i+1];
+        xbuf[2] = 0;
+        int t;
+        sscanf(xbuf,"%x",&t);
+        res[i/2] = (char)t;
+    }
+    res[len] = 0;
+    return res;
+}
+
+std::string ELF::bin_to_ascii(char *bin,int len){
+    std::string s;
+    for(int j=0;j<len;++j){
+        char xbuf[3];
+        sprintf(xbuf,"%x",(unsigned char)bin[j]);
+        if(strlen(xbuf)==1){
+            xbuf[2] = xbuf[1];
+            xbuf[1] = xbuf[0];
+            xbuf[0] = '0';
+        }
+        s.append(xbuf);
+    }
+    return s;
 }
 
 void ELF::parse_from_binary(BYTE *_buf, int buf_len){
@@ -245,7 +319,7 @@ void ELF::parse_from_binary(BYTE *_buf, int buf_len){
     for(;i<section_header_begin+16;++i){
         bss_begin += buf[i] << (8*(i-section_header_begin-12));
     }
-    text_len = 0;
+    text_len = 4;
     text = new char[section_header_begin+4];
     data = new char[section_header_begin];
     rodata = new char[section_header_begin];
@@ -269,5 +343,18 @@ void ELF::parse_from_binary(BYTE *_buf, int buf_len){
         rodata_len ++;
     }
     bss_len = section_header_begin - i;
+    string_text = bin_to_ascii(text,text_len);
+}
+
+int Kernel::waitpid_stall(VM* vm){
+    if(vm->waiting_pid > 0){
+        int wpid = vm->waiting_pid;
+        if(!pid_set.count(wpid) || pid_set[wpid]->status == VM::T){
+            return 0;
+        }
+        else
+            return 1;
+    }
+    return 0;
 }
 

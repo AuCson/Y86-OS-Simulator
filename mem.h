@@ -36,14 +36,14 @@ public:
         return 0;
     }
     void free_page(int &error,int physical_addr){
-        if(physical_addr % 4096){
+        /*if(physical_addr % 4096){
             error = 1;
             return;
         }
         auto itr = allocated_page.find(physical_addr);
         if(itr!=allocated_page.end()){
             allocated_page.erase(itr);
-        }
+        }*/
         error =0;
     }
 };

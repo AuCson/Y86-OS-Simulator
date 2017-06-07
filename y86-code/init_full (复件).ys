@@ -1,0 +1,99 @@
+elf_header:
+.long section_table
+
+text:
+loop:
+irmovl $0x3, %eax	#syscall num is 3 - read
+irmovl $0x0, %ebx 	#fd is 0 - stdin
+irmovl $0x1, %ecx 	#read 1 char
+irmovl $0x40000000,%esp #reset stack
+pushl %ebx		#esp -4
+rmmovl %ebx, 0(%esp)	#initially zero
+rrmovl %esp, %edx	#read to 0x3ffffffc
+.long 0x000000e0
+.byte 0			#syscall = 3, fd = 0, readnum = 1, read to stack
+mrmovl 0(%esp), %esi
+irmovl $0x7b, %edi	#if the char is '{' or '&'
+subl %esi,%edi
+je cond2
+irmovl $0x26, %edi
+subl %esi,%edi
+jne loop		#found something to execve
+cond2:
+irmovl $0x2, %eax	#syscall num is 2 - fork
+.long 0x000000e0
+.byte 0
+andl %eax,%eax		#am i child process?
+je child		#if not and not &, wait for the child process
+irmovl $0x26, %edi
+subl %esi, %esi
+je text
+rrmovl %eax, %ebx
+irmovl $7, %eax 
+.long 0x000000e0	
+.byte 0			#syscall = 7, waiting_pid = %ebx
+jmp text
+child:
+irmovl $0x4000fffc,%edx
+irmovl start_addr, %ebx
+rmmovl %edx,(%ebx)
+loop2:
+irmovl $0x3,%eax
+irmovl $0x0,%ebx
+irmovl $0x1,%ecx
+.long 0x000000e0
+.byte 0			#read a char
+mrmovl (%edx),%edi	#get the char read just now
+irmovl $0x7c,%esi	#if the char is '|' or  '}'
+subl   %edi,%esi
+je line_end
+irmovl $0x7d, %esi
+subl   %edi,%esi
+jne next_cond
+line_end:
+rmmovl %ebx,(%edx)	#set to '\0'
+irmovl start_addr,%ebx
+mrmovl (%ebx),%eax
+irmovl $0x100, %esi
+subl   %esi, %eax	#next param from 0x4000fffc, 0x4000fefc, 0x40000fdfc
+rmmovl %eax, (%ebx)
+rrmovl %eax, %edx
+irmovl $0x7d, %esi	#if the char is '}'
+subl   %edi, %esi
+je end
+jmp loop2
+next_cond:
+irmovl $0x4, %esi
+subl   %esi,%edx
+jmp loop2
+end:
+irmovl $0x0, %esi
+rmmovl %esi, (%edx)
+irmovl $0x4, %esi
+subl   %esi, %edx
+irmovl $0x4000fffc, %edx 
+irmovl $0xb, %eax
+rrmovl %edx, %ebx
+.long 0x000000e0
+.byte 0		
+
+nop
+nop
+nop
+nop
+nop
+data:
+start_addr:
+.long 0xabcdabcd
+rodata:
+bss:
+section_table:
+text_offset:
+.long text
+data_offset:
+.long data
+rodata_offset:
+.long rodata
+bss_offset:
+.long bss
+

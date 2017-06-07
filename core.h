@@ -4,6 +4,7 @@
 #include <string>
 #include <list>
 #include <stack>
+#include <queue>
 #include <vector>
 #include "bit.h"
 class CPU;
@@ -27,7 +28,7 @@ public:
     int context_switching = 0;
     int core_error;
     int sys_call_num = -1;
-    int saved_pc;
+    std::queue<int> saved_pc;
 
     //Stat
     const int IHALT = 0,INOP = 1,IRRMOVL = 2, IIRMOVL = 3,IRMMOVL = 4,IMRMOVL = 5,IOPL = 6,

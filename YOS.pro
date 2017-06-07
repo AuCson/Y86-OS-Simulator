@@ -25,7 +25,6 @@ DEFINES += QT_DEPRECATED_WARNINGS
 
 SOURCES += main.cpp\
         mainwindow.cpp \
-    csapp.c \
     core.cpp \
     bit.cpp \
     debug.cpp \
@@ -34,10 +33,10 @@ SOURCES += main.cpp\
     kernel.cpp \
     y86ui.cpp \
     hardwareui.cpp \
-    fileui.cpp
+    fileui.cpp \
+    csapp.cpp
 
 HEADERS  += mainwindow.h \
-    csapp.h \
     core.h \
     cpu.h \
     bit.h \
@@ -46,7 +45,8 @@ HEADERS  += mainwindow.h \
     cache.h \
     elf.h \
     ysyscall.h \
-    kernel.h
+    kernel.h \
+    csapp.h
 
 FORMS    += mainwindow.ui
 

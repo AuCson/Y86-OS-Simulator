@@ -49,6 +49,8 @@ public:
     int stall_clk = 0;
     //fd ref
     OpenFileTable* fd_set[512] = {0};
+    //waitpid / pause...
+    int waiting_pid = -1;
 
     int saved = 0;
     int saved_reg[8];

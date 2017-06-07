@@ -1,0 +1,73 @@
+  0x000:              | elf_header:
+  0x000: b5000000     | .long section_table
+                      | 
+  0x004:              | text:
+  0x004: 3083fcfe0040 | irmovl $0x4000fefc, %ebx
+  0x00a: 500300000000 | mrmovl (%ebx),%eax
+  0x010: 308130000000 | irmovl $0x30, %ecx
+  0x016: 6110         | subl %ecx, %eax
+  0x018: a008         | pushl %eax
+  0x01a: 805b000000   | call Fib
+  0x01f: 308130000000 | irmovl $0x30, %ecx
+  0x025: 6010         | addl %ecx,%eax
+  0x027: 3082b1000000 | irmovl result,%edx
+  0x02d: 400200000000 | rmmovl %eax, 0(%edx)
+  0x033: 308004000000 | irmovl $0x4, %eax
+  0x039: 308301000000 | irmovl $0x1, %ebx
+  0x03f: 308104000000 | irmovl $0x4, %ecx
+  0x045: e0000000     | .long 0x000000e0
+  0x049: 00           | .byte 0
+  0x04a: 308001000000 | irmovl $0x1, %eax
+  0x050: 308300000000 | irmovl $0, %ebx
+  0x056: e0000000     | .long 0x000000e0
+  0x05a: 00           | .byte 0
+                      | 
+  0x05b:              | Fib:
+  0x05b: a058         | pushl %ebp
+  0x05d: 2045         | rrmovl %esp,%ebp
+  0x05f: 501508000000 | mrmovl 8(%ebp),%ecx
+                      | 
+  0x065: 308201000000 | irmovl $1,%edx
+  0x06b: 6211         | andl %ecx,%ecx
+  0x06d: 7379000000   | je Done
+  0x072: 6112         | subl %ecx,%edx
+  0x074: 7484000000   | jne Cont
+  0x079:              | Done:
+  0x079: 308001000000 | irmovl $1,%eax
+  0x07f: 2054         | rrmovl %ebp,%esp
+  0x081: b058         | popl %ebp
+  0x083: 90           | ret
+  0x084:              | Cont:
+  0x084: 308201000000 | irmovl $1,%edx
+  0x08a: 6121         | subl %edx,%ecx
+  0x08c: a018         | pushl %ecx
+  0x08e: 805b000000   | call Fib
+  0x093: b018         | popl %ecx
+  0x095: 308201000000 | irmovl $1,%edx
+  0x09b: 6121         | subl %edx,%ecx
+  0x09d: a008         | pushl %eax
+  0x09f: a018         | pushl %ecx
+  0x0a1: 805b000000   | call Fib
+  0x0a6: b018         | popl %ecx
+  0x0a8: b028         | popl %edx
+  0x0aa: 6020         | addl %edx,%eax
+  0x0ac: 2054         | rrmovl %ebp,%esp
+  0x0ae: b058         | popl %ebp
+  0x0b0: 90           | ret
+                      | 
+                      | 
+  0x0b1:              | data:
+  0x0b1:              | result:
+  0x0b1: cdabcdab     | .long 0xabcdabcd
+  0x0b5:              | rodata:
+  0x0b5:              | bss:
+  0x0b5:              | section_table:
+  0x0b5:              | text_offset:
+  0x0b5: 04000000     | .long text
+  0x0b9:              | data_offset:
+  0x0b9: b1000000     | .long data
+  0x0bd:              | rodata_offset:
+  0x0bd: b5000000     | .long rodata
+  0x0c1:              | bss_offset:
+  0x0c1: b5000000     | .long bss
+                      | 

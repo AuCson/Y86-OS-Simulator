@@ -36,6 +36,8 @@ public:
     int current_core_num = 0;
     VM* current_vm;
     int running = 0;
+    int speed = 200;
+
 
     void cycle_ui();
     void cpu_viewer(int cpu_id, int corenum);
@@ -43,6 +45,7 @@ public:
     void print_stdout();
     void vm_area_log(VM* vm);
     void stdin_readline(QString s);
+    void status_log(VM* vm);
 
     void debug_msg(QString s){
         QMessageBox box(QMessageBox::Warning,"Debug",s);
@@ -74,6 +77,12 @@ private slots:
     void on_b_parse_elf_clicked();
 
     void on_b_run_clicked();
+
+    void on_b_add_core_clicked();
+
+    void on_checkBox_clicked();
+
+    void on_checkBox_2_clicked();
 
 private:
     Ui::MainWindow *ui;

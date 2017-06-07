@@ -13,7 +13,8 @@ public:
     std::string string_text;
 
     void parse_from_binary(BYTE* buf,int buf_len);
-
+    char* ascii_to_bin(std::string ascii);
+    std::string bin_to_ascii(char *bin,int len);
     void load_from_strings(std::string _text,std::string _data,std::string _rodata){
         text = new char[_text.size()];
         data = new char[_data.size()];

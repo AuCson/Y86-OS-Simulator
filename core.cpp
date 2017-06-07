@@ -47,7 +47,7 @@ void Core::init()
     //Registers
     for(int i=0;i<8;++i)
         REG[i]=0;
-    REG[RESP] = 0x1000;
+    REG[RESP] = 0x40000000;
 
     for(int i =0;i<6;++i)
         hist_stat[i] = -1;
@@ -62,7 +62,9 @@ void Core::init()
     stat = SAOK;
 
     logs.clear();
-
+    while(!saved_pc.empty()){
+        saved_pc.pop();
+    }
     for(int i=0;i<5;++i)
         inspos[i]=0;
 }
@@ -354,6 +356,10 @@ void Core::stageE()
 {
     if (E_bubble)
     {
+        if(E_stat == SSYS || E_stat == SSPD){
+            if(!saved_pc.empty())
+            saved_pc.pop();
+        }
         E_stat = SBUB;
         E_icode = 1;
         E_ifun = e_valE =  E_valA = 0;
@@ -435,6 +441,10 @@ void Core::stageD()
 
 
     if (D_bubble) {
+        if(D_stat == SSYS || D_stat == SSPD){
+            if(!saved_pc.empty())
+            saved_pc.pop();
+        }
         D_stat = SBUB;
         D_icode = 1;
         D_ifun = 0;
@@ -577,7 +587,7 @@ updateD:
     else
     {
         d_valB = d_rvalB;
-        sprintf(buf,"D:d_valB from %s : %x",regname[d_srcB].c_str(),d_valB);
+        //sprintf(buf,"D:d_valB from %s : %x",regname[d_srcB].c_str(),d_valB);
         logs.push_front(buf);
     }
 
@@ -676,7 +686,7 @@ updateF:
         funcid = f_predPC;
 
     if(f_stat == SSYS || f_stat == SSPD){
-        this->saved_pc = f_predPC;
+        this->saved_pc.push(f_predPC);
     }
 }
 

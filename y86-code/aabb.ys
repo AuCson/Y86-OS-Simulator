@@ -1,0 +1,74 @@
+elf_header:
+.long section_table
+
+text:
+irmovl $0x4000fefc, %ebx
+mrmovl (%ebx),%eax
+irmovl $0x30, %ecx
+subl %ecx, %eax
+pushl %eax
+call Game
+irmovl $0x30, %ecx
+addl %ecx,%eax
+irmovl result,%edx
+rmmovl %eax, 0(%edx)
+irmovl $0x4, %eax
+irmovl $0x1, %ebx
+irmovl $0x4, %ecx
+.long 0x000000e0
+.byte 0
+irmovl $0x1, %eax
+irmovl $0, %ebx
+.long 0x000000e0
+.byte 0
+
+Game
+pushl %ebp
+rrmovl %esp,%ebp
+mrmovl 8(%ebp),%ecx
+
+irmovl $1,%edx
+andl %ecx,%ecx
+je Done
+subl %ecx,%edx
+jne Cont
+Done:
+irmovl $1,%eax
+rrmovl %ebp,%esp
+popl %ebp
+ret
+Cont:
+irmovl $1,%edx
+subl %edx,%ecx
+pushl %ecx
+call Fib
+popl %ecx
+irmovl $1,%edx
+subl %edx,%ecx
+pushl %eax
+pushl %ecx
+call Fib
+popl %ecx
+popl %edx
+addl %edx,%eax
+rrmovl %ebp,%esp
+popl %ebp
+ret
+
+
+data:
+result:
+.long 0xabcdabcd
+rodata:
+.byte 
+bss:
+section_table:
+text_offset:
+.long text
+data_offset:
+.long data
+rodata_offset:
+.long rodata
+bss_offset:
+.long bss
+

@@ -6,12 +6,12 @@ irmovl $0x4, %eax	#syscall num is 4 - write
 irmovl $0x1, %ebx 	#fd is 1
 irmovl $0x5, %ecx 	#read 5 numbers
 irmovl data, %edx	#start from data + 0x0
+.long 0x000000e0	#syscall
 .byte 0
-.long 0xe0000000	#syscall
 irmovl $0x0, %ebx	#exit arg is 0
 irmovl $0x1, %eax 	#syscall num is 1 - exit
+.long 0x000000e0	#syscall
 .byte 0
-.long 0xe0000000	#syscall
 
 
 data:

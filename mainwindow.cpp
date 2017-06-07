@@ -25,6 +25,7 @@ void MainWindow::startup(){
 }
 
 void MainWindow::clk(){
+
     kernel->cycle();
     cycle_ui();
     show_log();
@@ -70,13 +71,14 @@ void MainWindow::on_b_parse_elf_clicked()
 
 void MainWindow::on_b_run_clicked()
 {
+    speed = ui->s_speed->text().toInt();
     running = !running;
     autorun_handler();
 }
 
 void MainWindow::autorun_handler()
 {
-    int speed = 10000;
+
     while(running)
     {
         QElapsedTimer t;
@@ -91,4 +93,20 @@ void MainWindow::autorun_handler()
         }
     }
 
+}
+
+void MainWindow::on_b_add_core_clicked()
+{
+    current_vm->cpu->add_core();
+    hardware_tree_viewer();
+}
+
+void MainWindow::on_checkBox_clicked()
+{
+    kernel->block_minor =  (ui->checkBox->checkState() == Qt::Checked);
+}
+
+void MainWindow::on_checkBox_2_clicked()
+{
+    kernel->block_normal = (ui->checkBox->checkState() == Qt::Checked);
 }

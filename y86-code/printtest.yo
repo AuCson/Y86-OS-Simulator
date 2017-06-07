@@ -6,12 +6,12 @@
   0x00a: 308301000000 | irmovl $0x1, %ebx 	#fd is 1
   0x010: 308105000000 | irmovl $0x5, %ecx 	#read 5 numbers
   0x016: 308232000000 | irmovl data, %edx	#start from data + 0x0
-  0x01c: 00           | .byte 0
-  0x01d: 000000e0     | .long 0xe0000000	#syscall
+  0x01c: e0000000     | .long 0x000000e0	#syscall
+  0x020: 00           | .byte 0
   0x021: 308300000000 | irmovl $0x0, %ebx	#exit arg is 0
   0x027: 308001000000 | irmovl $0x1, %eax 	#syscall num is 1 - exit
-  0x02d: 00           | .byte 0
-  0x02e: 000000e0     | .long 0xe0000000	#syscall
+  0x02d: e0000000     | .long 0x000000e0	#syscall
+  0x031: 00           | .byte 0
                       | 
                       | 
   0x032:              | data:

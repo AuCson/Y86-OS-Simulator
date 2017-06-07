@@ -26,7 +26,8 @@ int Kernel::ysyscall_handler(Core* core){
         VM* new_vm = NULL;
         int new_pid = yfork(error,core->vm->pid,&pid_set,core->vm,new_vm);
         new_vm->saved_reg[core->REAX] = 0;
-        new_vm->saved_pc = core->saved_pc;
+        new_vm->saved_pc = core->saved_pc.front();
+        //core->saved_pc.pop();
         new_vm->saved = 1;
         core->REG[core->REAX] = new_pid;
     }
@@ -41,9 +42,10 @@ int Kernel::ysyscall_handler(Core* core){
         }
 
         int arg_cnt = 0;
-        for(int i =0;i<4;i+=4){
+        for(int i =0;;i+=4){
             int src;
-            WORD arg_vm_addr = 0;
+            WORD arg_vm_addr = args_start_addr - (i/4) * 0x100;
+            /*
             for(int k = 0;k<4;++k){
                 BYTE byte = vm->read(args_start_addr-i+k,error,src);
                 arg_vm_addr += byte << (8*k);
@@ -54,19 +56,28 @@ int Kernel::ysyscall_handler(Core* core){
                 break;
             else
                 arg_cnt ++;
-            for(int j = 0;j<100-1;++j){
+            */
+            int j;
+            for(j = 0;j<100-1;++j){
                 int src;
                 BYTE byte = vm->read(arg_vm_addr-j*4,error,src);
                 arg_buf[i/4][j] = byte;
                 if(byte == 0)
                     break;
             }
+            if(j == 0)
+                break;
+            else
+                arg_cnt++;
         }
         //now filename is stored arg_buf[1][0]
         int res = yexecve_wrapper(arg_buf,1,vm,error);
-        if(!res){
-            error = 1;
+        if(res){
+            core->init();
+            vm->saved_pc = 4;
+            core->saved_pc.push(4);
         }
+
     }
     else if(sys_num == Syscall::OPEN){
         int error;
@@ -75,7 +86,7 @@ int Kernel::ysyscall_handler(Core* core){
         int i;
         for(i = 0;i<100;++i){
             int src;
-            BYTE byte = core->vm->read(string_arg_addr + i,error,src);
+            BYTE byte = core->vm->read(string_arg_addr - i*4,error,src);
             filename[i] = byte;
             if(byte == 0)
                 break;
@@ -101,6 +112,10 @@ int Kernel::ysyscall_handler(Core* core){
         int store_addr = core->REG[core->REDX];
         int ret = ywrite(error,fd,charnum,store_addr,core->vm);
         core->REG[core->REAX] = ret;
+    }
+    else if(sys_num == Syscall::WAITPID){
+        int waiting_pid = core->REG[core->REBX];
+        ywaitpid(error,core->vm,waiting_pid);
     }
     return error;
 }
@@ -134,11 +149,12 @@ int Kernel::yfork(int &error,int parent_pid,std::map<int,VM*>* pid_map,VM *old_v
             WORD addr= i->start & 0xFFFFF000;
             WORD end_addr = i->end & 0xFFFFF000;
             for(;addr<=end_addr;addr+=4096){
-                old_vm->pgd_valid[addr] = VM::RONLY;
+                new_vm->pgd_valid[addr] = VM::RONLY;
             }
         }
     }
     error =0 ;
+    add_log("Forked new process "+QString::number(new_pid),Style::IMPORTANT);
     return new_pid;
 }
 
@@ -150,26 +166,31 @@ int Kernel::yexecve_wrapper(BYTE **argv,int argc,VM* vm,int &error){
             elf->parse_from_binary(vnode->file_content,vnode->filesize);
             yexecve(error,elf,vm);
             //sysarg stack is not smashed!
-            return 0;
+            add_log("Execve success on "+QString::number(vm->pid),Style::IMPORTANT);
+            return 1;
         }
     }
-    return -1;
+    return 0;
 }
 
 void Kernel::yexecve(int &error,ELF* elf,VM* vm){
     //destroy the user-space of the VM
     VM::VM_AREA_STRUCT sys_arg_area;
+    int inited = 0;
     for(auto i =vm->vm_area.begin();i!=vm->vm_area.end();++i){
         if(i->section_name == "cmd_args"){
             sys_arg_area = *i;
+            inited = 1;
             break;
         }
     }
     vm->vm_area.clear();
+    if(inited)
+        vm->vm_area.push_back(sys_arg_area);
     for(auto i = vm->pgd.begin();i!=vm->pgd.end();++i){
         WORD vm_addr = i->first;
         if(vm->pgd_valid[vm_addr]){
-            if(vm_addr & 0xFFFFF000< sys_arg_area.start & 0xFFFFF000 || vm_addr & 0xFFFFF000 > sys_arg_area.end & 0xFFFFF000)
+            if((vm_addr & 0xFFFFF000)< (sys_arg_area.start & 0xFFFFF000) || (vm_addr & 0xFFFFF000) > (sys_arg_area.end & 0xFFFFF000))
                 vm->free_page_pte(vm_addr,error);
         }
     }
@@ -185,7 +206,8 @@ void Kernel::yexecve(int &error,ELF* elf,VM* vm){
     next_addr = vm->allocate_section("bss",next_addr,bss,elf->bss_len,
                                      VM::VM_AREA_STRUCT::RW,VM::VM_AREA_STRUCT::PRIVATE,error);
     next_addr = vm->allocate_section("stack",0x3FFF0000,NULL,0x10000,VM::VM_AREA_STRUCT::RW,VM::VM_AREA_STRUCT::PRIVATE,error,false);
-    next_addr = vm->allocate_section("cmd_args",0x40000000,NULL,0x10000,VM::VM_AREA_STRUCT::RW,VM::VM_AREA_STRUCT::PRIVATE,error,false);
+    if(!inited)
+        next_addr = vm->allocate_section("cmd_args",0x40000000,NULL,0x10000,VM::VM_AREA_STRUCT::RW,VM::VM_AREA_STRUCT::PRIVATE,error,false);
 
     vm->heap_low = vm->heap_high = next_addr;
     vm->stack_low = vm->stack_high = 0x40000000;
@@ -222,6 +244,13 @@ int Kernel::yopen(int &error,char* filename,VM* vm){
 
 int Kernel::yread(int &error,int fd,int charnum,WORD store_vm_addr,VM* vm){
     error = 0;
+    if(fd>512){
+        error = 1;
+        return -1;
+    }
+    if(charnum==5){
+        int c = 1;
+    }
     OpenFileTable* opened_file = vm->fd_set[fd];
     if(!opened_file){
         error = 1; // file not open
@@ -229,6 +258,8 @@ int Kernel::yread(int &error,int fd,int charnum,WORD store_vm_addr,VM* vm){
     }
     BYTE* file_content = opened_file->vnode->file_content;
     int file_pos = opened_file->pos;
+    if(file_pos == 2)
+        int c = 1;
     int file_len = opened_file->vnode->filesize;
     int read_cnt = 0;
     for(int i = file_pos; i<file_len && i<file_pos+charnum; ++i){
@@ -272,4 +303,10 @@ int Kernel::ywrite(int &error,int fd,int charnum,WORD store_vm_addr,VM* vm){
     }
     opened_file->pos += read_cnt;
     return charnum - read_cnt;
+}
+
+int Kernel::ywaitpid(int &error, VM *vm, int pid){
+    error = 0;
+    vm->waiting_pid = pid;
+    return 0;
 }

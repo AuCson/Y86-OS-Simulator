@@ -9,17 +9,24 @@ irmovl $0x1, %ecx 	#read 1 char
 irmovl $0x40000000,%esp #reset stack
 rrmovl %esp, %edx	#get ready to read to stack
 pushl %ebx		#esp -4
+rmmovl %ebx, 4(%esp)	#initially zero
 .long 0x000000e0
 .byte 0			#syscall = 3, fd = 0, readnum = 1, read to stack
 mrmovl 4(%esp), %esi
 irmovl $0x7b, %edi	#if the char is '{'
 subl %edi,%esi
 jne loop		#found something to execve
-irmovl $0x2,%eax	#syscall num is 2 - fork
+irmovl $0x2, %eax	#syscall num is 2 - fork
 .long 0x000000e0
 .byte 0
 andl %eax,%eax		#am i child process?
-jne loop		#if not, go to the beginning
+je child		#if not, wait for the child process
+rrmovl %eax, %ebx
+irmovl $7, %eax 
+.long 0x000000e0	
+.byte 0			#syscall = 7, waiting_pid = %ebx
+jmp text
+child:
 irmovl $0x4000fffc, %edx
 loop2:	
 irmovl $0x3, %eax		#syscall = 3, fd = 1, readnum = 1, read to sys_arg section
@@ -41,6 +48,11 @@ rrmovl %edx, %ebx	#char **argv point at argv[0]
 irmovl $0xb, %eax	#syscall = 11(execve), argument = %ebx
 .long 0x000000e0
 .byte 0
+nop
+nop
+nop
+nop
+nop
 data:
 .long 0xabcdabcd
 rodata:
